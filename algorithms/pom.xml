@@ -16,7 +16,8 @@
     <modules>
         <module>./dhc</module>
         <module>./lstar-generic</module>
-		<module>./lstar</module>
+        <module>./lstar</module>
+        <module>./observation-pack</module>
     </modules>  
     
 </project>
