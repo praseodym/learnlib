@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>learnlib-observation-pack</artifactId>
-    <name>learnlib-observation-pack</name>
+    <name>LearnLib :: Observation Pack</name>
 
     <dependencies>
         <dependency>
