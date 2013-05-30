@@ -15,7 +15,7 @@
 	<parent>
 		<groupId>de.learnlib</groupId>
 		<artifactId>learnlib-parent</artifactId>
-		<version>0.9-SNAPSHOT</version>
+		<version>0.9.0-SNAPSHOT</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 
@@ -24,9 +24,9 @@
 	</properties>
 
 	<modules>
-		<module>./core</module>
-		<module>./typical</module>
-		<module>./complete</module>
+		<module>core</module>
+		<module>typical</module>
+		<module>complete</module>
 	</modules>
 
 	<build>
