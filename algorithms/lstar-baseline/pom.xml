@@ -8,12 +8,13 @@
 	<parent>
 		<artifactId>learnlib-algorithms</artifactId>
 		<groupId>de.learnlib</groupId>
-		<version>0.9-SNAPSHOT</version>
+		<version>0.9.0-SNAPSHOT</version>
 		<relativePath>../pom.xml</relativePath>        
 	</parent>
 
-	<artifactId>learnlib-lstar</artifactId>
-	<name>LearnLib :: L-Star</name>
+	<artifactId>learnlib-lstar-baseline</artifactId>
+	<name>LearnLib :: Algorithms :: Baseline L*</name>
+	<description>A simple, straightforward implementation of Dana Angluin's L* algorithm</description>
 
 	<dependencies>
 		<dependency>
