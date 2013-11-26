@@ -24,7 +24,7 @@ import net.automatalib.automata.transout.MealyMachine;
 import net.automatalib.commons.util.collections.CollectionsUtil;
 import net.automatalib.words.Word;
 import net.automatalib.words.WordBuilder;
-import de.learnlib.api.EquivalenceOracle;
+import de.learnlib.api.EquivalenceOracle.MealyEquivalenceOracle;
 import de.learnlib.api.SUL;
 import de.learnlib.oracles.DefaultQuery;
 
@@ -44,7 +44,7 @@ import de.learnlib.oracles.DefaultQuery;
  * @author falkhowar
  */
 public class RandomWalkEQOracle<I, O>
-		implements EquivalenceOracle<MealyMachine<?,I,?,O>, I, Word<O>> {
+		implements MealyEquivalenceOracle<I,O> {
 
 	/**
 	 * probability to restart before step.
@@ -123,12 +123,20 @@ public class RandomWalkEQOracle<I, O>
 		WordBuilder<I> wbIn = new WordBuilder<>();
 		WordBuilder<O> wbOut = new WordBuilder<>();
 
+                boolean first = true;
+                sul.pre();
 		while (steps < maxSteps) {
 
 			// restart?
 			double restart = random.nextDouble();
 			if (restart < restartProbability) {
-				sul.reset();
+				if (first) {
+                                    first = false;
+                                }
+                                else {
+                                    sul.post();
+                                }
+                                sul.pre();
 				cur = hypothesis.getInitialState();
 				wbIn.clear();
 				wbOut.clear();
@@ -147,11 +155,12 @@ public class RandomWalkEQOracle<I, O>
 			if (!outSul.equals(outHyp)) {
 				DefaultQuery<I, Word<O>> ce = new DefaultQuery<>(wbIn.toWord());
 				ce.answer(wbOut.toWord());
+                                sul.post();
 				return ce;
 			}
 			cur = hypothesis.getSuccessor(cur, in);
 		}
-
+                sul.post();
 		return null;
 	}
 }

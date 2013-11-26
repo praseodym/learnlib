@@ -18,33 +18,31 @@ package de.learnlib.examples.example2;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Deque;
 import java.util.List;
-import java.util.Queue;
 import java.util.Random;
 
 import net.automatalib.automata.transout.MealyMachine;
 import net.automatalib.commons.dotutil.DOT;
 import net.automatalib.util.graphs.dot.GraphDOT;
-import net.automatalib.words.Alphabet;
 import net.automatalib.words.Word;
-import net.automatalib.words.impl.SimpleAlphabet;
-import de.learnlib.algorithms.lstargeneric.ce.ObservationTableCEXHandlers;
-import de.learnlib.algorithms.lstargeneric.closing.ClosingStrategies;
-import de.learnlib.algorithms.lstargeneric.mealy.ExtensibleLStarMealy;
-import de.learnlib.api.EquivalenceOracle;
-import de.learnlib.api.LearningAlgorithm;
+import de.learnlib.algorithms.lstargeneric.mealy.ExtensibleLStarMealyBuilder;
+import de.learnlib.api.EquivalenceOracle.MealyEquivalenceOracle;
+import de.learnlib.api.LearningAlgorithm.MealyLearner;
 import de.learnlib.api.SUL;
+import de.learnlib.cache.Caches;
+import de.learnlib.drivers.reflect.AbstractMethodInput;
+import de.learnlib.drivers.reflect.AbstractMethodOutput;
+import de.learnlib.drivers.reflect.SimplePOJOTestDriver;
 import de.learnlib.eqtests.basic.mealy.RandomWalkEQOracle;
-import de.learnlib.experiments.Experiment;
-import de.learnlib.oracles.CounterOracle;
+import de.learnlib.experiments.Experiment.MealyExperiment;
+import de.learnlib.oracles.ResetCounterSUL;
 import de.learnlib.oracles.SULOracle;
 import de.learnlib.statistics.SimpleProfiler;
-import java.util.Deque;
+import de.learnlib.statistics.StatisticSUL;
 
 /**
  * This example shows how a model of a Java class can be learned using the SUL
@@ -82,100 +80,39 @@ public class Example {
             return data.poll();
         }
     }
-
-    /*
-     * We use the BSQInput class to wrap concrete method invocations
-     * and use these as alphabet symbols for the learning algorithm
-     */
-    public static class BSQInput {
-
-        // method to invoke
-        public final Method action;
-        
-        // method parameter values
-        public final Object[] data;
-
-        public BSQInput(Method action, Object[] data) {
-            this.action = action;
-            this.data = data;
-        }
-
-        // this will be used for printing when 
-        // logging or exporting automata
-        @Override
-        public String toString() {
-            return action.getName() + Arrays.toString(data);
-        }
-    }
-
-    /*
-     * The BSQAdapter 
-     * 
-     */
-    public static class BSQAdapter implements SUL<BSQInput, String> {
-
-        // system under learning
-        private BoundedStringQueue sul;
-
-        // reset the SUL
-        @Override
-        public void reset() {
-            // we just create a new instance
-            sul = new BoundedStringQueue();
-        }
-
-        // execute one input on the SUL
-        @Override
-        public String step(BSQInput in) {
-            try {
-                // invoke the method wrapped by in
-                Object ret = in.action.invoke(sul, in.data);
-                // make sure that we return a string
-                return ret == null ? "" : (String) ret;
-            } 
-            catch (IllegalAccessException | 
-                    IllegalArgumentException | 
-                    InvocationTargetException e) {
-                // This should never happen. In a real experiment
-                // this would be the point when we want to issue
-                // a warning or stop the learning.
-                return "err";
-            }
-        }
-    }
-
+    
+    
     public static void main(String[] args) throws NoSuchMethodException, IOException {
 
+        // instantiate test driver
+        SimplePOJOTestDriver driver = new SimplePOJOTestDriver(
+                BoundedStringQueue.class.getConstructor());
+                
         // create learning alphabet
-        
-        // offer(a)
-        BSQInput offer_a = new BSQInput(BoundedStringQueue.class.getMethod(
-                "offer", new Class<?>[]{String.class}), new Object[]{"a"});
+        Method mOffer = BoundedStringQueue.class.getMethod(
+                "offer", new Class<?>[]{String.class});
+        Method mPoll = BoundedStringQueue.class.getMethod(
+                "poll", new Class<?>[]{});
+                
+        // offer
+        AbstractMethodInput offer_a = driver.addInput("offer_a", mOffer, "a");
+        AbstractMethodInput offer_b = driver.addInput("offer_b", mOffer, "b");
 
-        // offer(b)
-        BSQInput offer_b = new BSQInput(BoundedStringQueue.class.getMethod(
-                "offer", new Class<?>[]{String.class}), new Object[]{"b"});
-
-        // poll()
-        BSQInput poll = new BSQInput(BoundedStringQueue.class.getMethod(
-                "poll", new Class<?>[]{}), new Object[]{});
-
-        Alphabet<BSQInput> inputs = new SimpleAlphabet<>();
-        inputs.add(offer_a);
-        inputs.add(offer_b);
-        inputs.add(poll);
-
-        // create an oracle that can answer membership queries
-        // using the BSQAdapter
-        SUL<BSQInput, String> sul = new BSQAdapter();
-        SULOracle<BSQInput, String> backOracle = new SULOracle<>(sul);
+        // poll
+        AbstractMethodInput poll = driver.addInput("poll", mPoll);
 
         // oracle for counting queries wraps sul
-        CounterOracle<BSQInput, Word<String>> mqOracle =
-                new CounterOracle<>(backOracle, "membership queries");
+        StatisticSUL<AbstractMethodInput, AbstractMethodOutput> statisticSul = 
+                new ResetCounterSUL<>("membership queries", driver);
+        
+        SUL<AbstractMethodInput, AbstractMethodOutput> effectiveSul = statisticSul;
+        // use caching in order to avoid duplicate queries
+        effectiveSul = Caches.createSULCache(driver.getInputs(), effectiveSul);
+        
+        SULOracle<AbstractMethodInput, AbstractMethodOutput> mqOracle = new SULOracle<>(effectiveSul);
 
         // create initial set of suffixes
-        List<Word<BSQInput>> suffixes = new ArrayList<>();
+        List<Word<AbstractMethodInput>> suffixes = new ArrayList<>();
         suffixes.add(Word.fromSymbols(offer_a));
         suffixes.add(Word.fromSymbols(offer_b));
         suffixes.add(Word.fromSymbols(poll));
@@ -183,31 +120,29 @@ public class Example {
         // construct L* instance (almost classic Mealy version)
         // almost: we use words (Word<String>) in cells of the table 
         // instead of single outputs.
-        LearningAlgorithm<? extends MealyMachine<?, BSQInput, ?, String>, BSQInput, Word<String>> lstar =
-                new ExtensibleLStarMealy<>(
-                inputs, // input alphabet
-                mqOracle, // mq oracle
-                suffixes, // initial suffixes
-                ObservationTableCEXHandlers.CLASSIC_LSTAR, // handling of counterexamples
-                ClosingStrategies.CLOSE_FIRST // always choose first unclosedness found 
-                );
+        MealyLearner<AbstractMethodInput, AbstractMethodOutput> lstar
+        	= new ExtensibleLStarMealyBuilder<AbstractMethodInput,AbstractMethodOutput>()
+        		.withAlphabet(driver.getInputs()) // input alphabet
+        		.withOracle(mqOracle)			  // membership oracle
+        		.create();
+                
 
         // create random walks equivalence test
-        EquivalenceOracle<MealyMachine<?, BSQInput, ?, String>, BSQInput, Word<String>> randomWalks =
+        MealyEquivalenceOracle<AbstractMethodInput, AbstractMethodOutput> randomWalks =
                 new RandomWalkEQOracle<>(
                 0.05, // reset SUL w/ this probability before a step 
                 10000, // max steps (overall)
                 false, // reset step count after counterexample 
                 new Random(46346293), // make results reproducible 
-                sul // system under learning
+                driver // system under learning
                 );
 
         // construct a learning experiment from
         // the learning algorithm and the random walks test.
         // The experiment will execute the main loop of
         // active learning
-        Experiment<MealyMachine<?,BSQInput,?,String>> experiment =
-                new Experiment<>(lstar, randomWalks, inputs);
+        MealyExperiment<AbstractMethodInput, AbstractMethodOutput> experiment =
+                new MealyExperiment<>(lstar, randomWalks, driver.getInputs());
 
         // turn on time profiling
         experiment.setProfile(true);
@@ -219,7 +154,8 @@ public class Example {
         experiment.run();
 
         // get learned model
-        MealyMachine<?, BSQInput, ?, String> result = experiment.getFinalHypothesis();
+        MealyMachine<?, AbstractMethodInput, ?, AbstractMethodOutput> result = 
+                experiment.getFinalHypothesis();
 
         // report results
         System.out.println("-------------------------------------------------------");
@@ -229,19 +165,19 @@ public class Example {
 
         // learning statistics
         System.out.println(experiment.getRounds().getSummary());
-        System.out.println(mqOracle.getCounter().getSummary());
+        System.out.println(statisticSul.getStatisticalData().getSummary());
 
         // model statistics
         System.out.println("States: " + result.size());
-        System.out.println("Sigma: " + inputs.size());
+        System.out.println("Sigma: " + driver.getInputs().size());
 
         // show model
         System.out.println();
         System.out.println("Model: ");
         
-        GraphDOT.write(result, inputs, System.out); // may throw IOException!
+        GraphDOT.write(result, driver.getInputs(), System.out); // may throw IOException!
         Writer w = DOT.createDotWriter(true);
-        GraphDOT.write(result, inputs, w);
+        GraphDOT.write(result, driver.getInputs(), w);
         w.close();
 
         System.out.println("-------------------------------------------------------");
