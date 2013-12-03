@@ -5,17 +5,21 @@
     <parent>
         <artifactId>learnlib-algorithms</artifactId>
         <groupId>de.learnlib</groupId>
-        <version>0.9-SNAPSHOT</version>
+        <version>0.10.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>        
     </parent>
 
     <artifactId>learnlib-observation-pack</artifactId>
-    <name>LearnLib :: Observation Pack</name>
+    <name>LearnLib :: Algorithms :: Observation Pack</name>
 
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>learnlib-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>learnlib-counterexamples</artifactId>
         </dependency>
         <dependency>
             <groupId>net.automatalib</groupId>
