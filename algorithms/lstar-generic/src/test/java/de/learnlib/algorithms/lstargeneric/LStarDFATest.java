@@ -30,6 +30,7 @@ import org.testng.annotations.Test;
 import de.learnlib.algorithms.lstargeneric.ce.ObservationTableCEXHandler;
 import de.learnlib.algorithms.lstargeneric.closing.ClosingStrategy;
 import de.learnlib.algorithms.lstargeneric.dfa.ExtensibleLStarDFA;
+import de.learnlib.algorithms.lstargeneric.dfa.ExtensibleLStarDFABuilder;
 import de.learnlib.api.EquivalenceOracle;
 import de.learnlib.api.LearningAlgorithm;
 import de.learnlib.api.MembershipOracle.DFAMembershipOracle;
